@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-$tq(g5ljgm9#xg@e2ry*temedjt+e8oepn@5ku&ffh7@)80m+4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = []
 CSRF_TRUSTED_ORIGINS = ["http://127.0.0.1:8000/"]
 
 # Application definition
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'providers',
     'drf_yasg',
 ]
+CORS_ALLOW_ALL_ORIGINS = True
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -56,16 +57,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-
-CORS_ALLOW_HEADERS = [
+'''
+CORS_ALLOW_HEADERS = (
     'accept',
     'accept-encoding',
     'authorization',
@@ -75,7 +68,21 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
-]
+)
+
+CORS_URLS_REGEX = r'^.*$'
+'''
+
+CORS_ALLOW_METHODS  =  (
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+)
+
+
 
 ROOT_URLCONF = 'inventory.urls'
 
