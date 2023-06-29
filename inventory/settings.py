@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'products',
     'providers',
     'drf_yasg',
+    'user',
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -113,6 +114,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'inventory.wsgi.application'
 
+AUTH_USER_MODEL = 'user.User'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
