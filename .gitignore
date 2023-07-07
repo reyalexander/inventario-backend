@@ -208,6 +208,12 @@ db.sqlite3
 __pycache__/
 static/
 media/
-/migrations/
+migrations/
 /migrations
 /migrations/__init__.py
+providers/migrations/
+products/migrations/
+clients/migrations/
+clients/migrations/0001_initial.py
+clients/migrations/0001_initial.py
+providers/migrations/0001_initial.py
