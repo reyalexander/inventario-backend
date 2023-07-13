@@ -1,12 +1,14 @@
 from user.models import User
-from .serializers import UserSerializer
+from user.serializers import UserSerializer
 from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.hashers import make_password
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    filter_backends = [DjangoFilterBackend]
 
     def perform_create(self, serializer):
         serializer.save(password=make_password(serializer.validated_data['password']))
@@ -20,7 +22,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             user = self.get_user(request.data)
             if user.is_superuser:
                 superuser_id = user.id
-                response.data['superuser_id'] = superuser_id
+                response.data['user_id'] = superuser_id
 
         return response
 
