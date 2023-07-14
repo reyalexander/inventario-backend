@@ -16,22 +16,14 @@ class UserViewSet(viewsets.ModelViewSet):
         password = request.data.get('password')
 
         if password:
-            print(password)
             hashed_password = make_password(password)
             instance.set_password(hashed_password)
             instance.save(update_fields=['password'])
-            print(instance)
-        
-        print(hashed_password)
-        user = User.objects.get(email= instance)
-        print(user)
-        user.set_password(hashed_password)
-        user.save()
+            request.data.pop('password', None)
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        print("y se pasa aqui no?")
 
         return Response(serializer.data)
 
