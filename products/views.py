@@ -24,3 +24,10 @@ class ProductViewSet(viewsets.ModelViewSet):
         todos = Product.objects.all()
         serializer = ProductSerializer(todos, many=True)
         return Response(serializer.data)
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        startswith = self.request.query_params.get('startswith')
+        if startswith:
+            queryset = queryset.filter(name__istartswith=startswith)
+        return queryset
