@@ -12,5 +12,4 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('token/', CustomTokenObtainPairView .as_view(), name='get_token'),
     path('refresh-token/', TokenRefreshView.as_view(), name="refresh_view"),
-]
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
