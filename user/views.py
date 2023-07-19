@@ -1,6 +1,6 @@
 from user.models import User
 from user.serializers import UserSerializer
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -9,6 +9,7 @@ from django.contrib.auth.hashers import make_password
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
 
     def update(self, request, *args, **kwargs):
