@@ -3,6 +3,7 @@ from .serializers import ProductSerializer
 from rest_framework import viewsets, permissions,status
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
+from django.db.models import Q
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -19,7 +20,11 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        startswith = self.request.query_params.get('startswith')
-        if startswith:
-            queryset = queryset.filter(name__istartswith=startswith)
+        search_query = self.request.query_params.get('search_query')
+        if search_query:
+            # Utilizamos Q objects para hacer una búsqueda "OR" en múltiples campos
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) |  # Búsqueda en el campo "name"
+                Q(code__icontains=search_query)  # Búsqueda en el campo "code" (si es necesario)
+            )
         return queryset
