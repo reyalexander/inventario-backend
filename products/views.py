@@ -11,7 +11,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['name', 'code',]
+    filterset_fields = ['name', 'code','description',]
 
     def get_serializer(self, *args, **kwargs):
         if isinstance(kwargs.get('data', {}), list):
@@ -25,6 +25,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             # Utilizamos Q objects para hacer una búsqueda "OR" en múltiples campos
             queryset = queryset.filter(
                 Q(name__icontains=search_query) |  # Búsqueda en el campo "name"
-                Q(code__icontains=search_query)  # Búsqueda en el campo "code" (si es necesario)
+                Q(code__icontains=search_query) |  # Búsqueda en el campo "code" (si es necesario)
+                Q(description__icontains=search_query)
             )
         return queryset
