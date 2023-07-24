@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'clients',
     'products',
     'providers',
+    'purchase',
+    'purchase_detail',
     'order',
     'order_detail',
     'drf_yasg',
