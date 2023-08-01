@@ -11,7 +11,7 @@ class ProviderViewSet(viewsets.ModelViewSet):
     serializer_class = ProviderSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['name', 'document']
+    filterset_fields = ['name', 'document', 'phone',]
 
     def post(self, request, format=None):
         serializer = ProviderSerializer(data=request.data, many=True)
@@ -27,6 +27,7 @@ class ProviderViewSet(viewsets.ModelViewSet):
             # Utilizamos Q objects para hacer una búsqueda "OR" en múltiples campos
             queryset = queryset.filter(
                 Q(name__icontains=search_query) |  # Búsqueda en el campo "name"
-                Q(document__icontains=search_query)  # Búsqueda en el campo "document" (si es necesario)
+                Q(document__icontains=search_query) | # Búsqueda en el campo "document" (si es necesario)
+                Q(phone__icontains=search_query)
             )
         return queryset

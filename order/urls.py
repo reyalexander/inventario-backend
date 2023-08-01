@@ -6,5 +6,6 @@ router = DefaultRouter()
 router.register('', views.OrderViewSet)
 
 urlpatterns = [
-    path('orders/', include(router.urls))
+    path('orders/', include(router.urls)),
+    path('orders/boleta/<int:order_id>/', views.BoletaPDFView.as_view(), name='boleta_pdf'),
 ]
