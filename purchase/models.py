@@ -9,6 +9,7 @@ class Purchase(models.Model):
     evidence = models.ImageField(upload_to='purchase', blank=True, null=True)
     detail = models.CharField(max_length=250, blank=True)
     date = models.DateTimeField(auto_now_add=True)
+    deleted = models.BooleanField(default=False, null=True)
 
     class Meta:
         ordering = ['-id']
