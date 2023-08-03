@@ -13,4 +13,8 @@ class Order(models.Model):
 
     class Meta:
         ordering = ['-id']
+
+    def delete(self, using=None, keep_parents=False):
+        self.deleted = True
+        self.save()
  
