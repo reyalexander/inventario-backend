@@ -1,7 +1,7 @@
-from django.shortcuts import render
 from .models import Order
 from .serializers import OrderSerializer
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
 from django.views import View
@@ -18,7 +18,8 @@ from user.models import User
 
 
 class OrderViewSet(viewsets.ModelViewSet):
-    queryset = Order.objects.all()
+    #queryset = Order.objects.all()
+    queryset = Order.objects.filter(deleted=False)
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
@@ -82,7 +83,7 @@ class BoletaPDFView(View):
         total_orden = sum(order_detail.quantity * order_detail.new_sale_price for order_detail in order_details)
 
         # Mostrar el total de la orden en la parte inferior de la boleta
-        p.drawString(400, y - 60, f'Total de la Orden: {total_orden}')
+        p.drawString(400, y - 60, f'Total de la Orden: S/. {total_orden}')
 
         # Finalizar el PDF
         p.showPage()
