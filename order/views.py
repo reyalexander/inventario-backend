@@ -18,11 +18,14 @@ from user.models import User
 
 
 class OrderViewSet(viewsets.ModelViewSet):
-    #queryset = Order.objects.all()
-    queryset = Order.objects.filter(deleted=False)
+    queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
+
+    def get_queryset(self):
+        # Excluir los registros marcados como eliminados
+        return Order.objects.filter(deleted=False)
 
 
 class BoletaPDFView(View):
