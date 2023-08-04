@@ -1,5 +1,6 @@
 from .models import Order
 from .serializers import OrderSerializer
+from .filters import OrderFilter
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -22,6 +23,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
+    filterset_class = OrderFilter
 
     def get_queryset(self):
         # Excluir los registros marcados como eliminados
