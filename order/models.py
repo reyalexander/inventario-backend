@@ -10,6 +10,7 @@ class Order(models.Model):
     description = models.TextField(null=True, default=None)
     total_price = models.DecimalField(max_digits=9, decimal_places=2, default=0)
     id_client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    payment_type = models.CharField(max_length=20, blank=True)
 
     class Meta:
         ordering = ['-id']
