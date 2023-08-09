@@ -97,6 +97,71 @@ class BoletaPDFView(View):
         return response
     
 
+class FacturaPDFView(View):
+    def get(self, request, order_id):
+        order = Order.objects.get(pk=order_id)
+        order_details = OrderDetail.objects.filter(id_order=order)
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'filename="factura_{order.order_code}.pdf"'
+
+        p = canvas.Canvas(response, pagesize=letter)
+
+        # Obtener la imagen de la empresa y mostrarla en la cabecera de la boleta
+        try:
+            user = User.objects.get(id=2)  # Reemplaza '1' con el ID de la empresa o la forma en que obtienes el usuario/empresa correcto
+            company_image = user.photo
+            if company_image:
+                p.drawImage(company_image.path, 350, 650, width=170, height=90)  # Ajusta las coordenadas según el diseño deseado
+        except User.DoesNotExist:
+            pass
+
+        # Configurar los detalles de la boleta
+        p.drawString(100, 700, f'FACTURA DE VENTA ELECTRÓNICA #{order.order_code}')
+        p.drawString(100, 680, f'SR(A): {order.id_client.name}')
+        p.drawString(100, 660, f'Fecha: {order.date.strftime("%d/%m/%Y %H:%M:%S")}')
+
+        y = 600
+        p.drawString(100, y, f'PRODUCTO')
+        p.drawRightString(310, y, f'CANT.')
+        p.drawRightString(430, y, F'P. UNIT')
+        p.drawRightString(520, y, 'SUBTOTAL')
+
+        y = 580
+        total_por_producto = 0  # Variable para almacenar el total por producto
+        for order_detail in order_details:
+            # Mostrar los detalles del producto en una misma línea
+            producto = f'{order_detail.id_product.name}'
+            cantidad = f'{order_detail.quantity}'
+            precio_unitario = f'{order_detail.new_sale_price}'
+            subtotal = f'{order_detail.quantity * order_detail.new_sale_price}'
+            p.drawString(100, y, producto)
+            p.drawRightString(300, y, cantidad) 
+            p.drawRightString(420, y, precio_unitario)
+            p.drawRightString(510, y, subtotal)
+            p.drawString(100, y - 20, f'----------------------------------------------------------------------------------------------------------------------------')
+            y -= 40
+
+            # Si se alcanza el final de la página, crear una nueva página
+            if y <= 140:
+                p.showPage()
+                p.drawString(100, 700, f'FACTURA DE VENTA ELECTRÓNICA No.:{order.order_code}')
+                p.drawString(100, 680, f'SR(AA).: {order.id_client.name}')
+                p.drawString(100, 660, f'FECHA: {order.date.strftime("%d/%m/%Y %H:%M:%S")}')
+                y = 620
+
+            total_por_producto += order_detail.quantity * order_detail.new_sale_price
+        # Calcular el total de la orden
+        total_orden = sum(order_detail.quantity * order_detail.new_sale_price for order_detail in order_details)
+
+        # Mostrar el total de la orden en la parte inferior de la boleta
+        p.drawString(400, y - 60, f'Total de la Orden: S/. {total_orden}')
+
+        # Finalizar el PDF
+        p.showPage()
+        p.save()
+
+        return response
 
 class BoletaCuadradaPDFView(View):
     def get(self, request, order_id):

@@ -38,7 +38,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     address = models.CharField(blank=False,max_length=100)
     phone = models.CharField(blank=False,max_length=12)
     ruc = models.CharField(blank=False,max_length=11)
-    igv = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    igv = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     photo = models.ImageField(upload_to="user_photo",null=True,blank=True, default='https://w7.pngwing.com/pngs/81/570/png-transparent-profile-logo-computer-icons-user-user-blue-heroes-logo.png')
     is_admin = models.BooleanField(default=False,verbose_name='super administrador')
     # estado de super administrador del usuario
