@@ -7,6 +7,9 @@ class OrderFilter(filters.FilterSet):
     last_weeks = filters.NumberFilter(method='filter_last_weeks')
     last_months = filters.NumberFilter(method='filter_last_months')
     last_years = filters.NumberFilter(method='filter_last_years')
+    specific_date = filters.DateFilter(field_name='date')
+    start_date = filters.DateFilter(field_name='date', lookup_expr='gte')
+    end_date = filters.DateFilter(field_name='date', lookup_expr='lte')
     id_client = filters.NumberFilter(field_name='id_client__id')
 
     class Meta:
