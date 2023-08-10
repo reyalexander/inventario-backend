@@ -12,7 +12,7 @@ class OrderSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
-        fields = ['id', 'order_code', 'date', 'edited', 'description', 'total_price', 'id_client', 'client_name']
+        fields = ['id', 'order_code', 'date', 'edited', 'description', 'total_price', 'payment_type', 'id_client', 'client_name']
 
     def get_client_name(self, obj):
         # Retorna el nombre del cliente asociado a la orden
