@@ -1,6 +1,10 @@
 from django.db import models
 
 class Provider(models.Model):
+    class DocumentType(models.IntegerChoices):
+        DNI = 1
+        RUC = 2
+        NO_DOCUMENT = 3
     name = models.CharField(max_length=150, null=False)
     documentType = models.IntegerField(null=True, blank=True)
     document = models.CharField(max_length=25, null=True, blank=True)
@@ -12,3 +16,18 @@ class Provider(models.Model):
 
     class Meta:
         ordering = ['-id']
+
+
+    @property
+    def document_type(self):
+        if self.documentType == Provider.DocumentType.DNI:
+            return 'DNI'
+        if self.documentType == Provider.DocumentType.RUC:
+            return 'RUC'
+        if self.documentType == Provider.DocumentType.NO_DOCUMENT:
+            return 'SIN DOCUMENTO'
+
+    def save(self, *args, **kwargs):
+        if self.document == '' or self.document is None:
+            self.documentType = 3
+        return super(Provider, self).save(*args, **kwargs)

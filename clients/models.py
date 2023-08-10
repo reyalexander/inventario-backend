@@ -18,3 +18,17 @@ class Client(models.Model):
 
     class Meta:
         ordering = ['-id']
+
+    @property
+    def document_type(self):
+        if self.documentType == Client.DocumentType.DNI:
+            return 'DNI'
+        if self.documentType == Client.DocumentType.RUC:
+            return 'RUC'
+        if self.documentType == Client.DocumentType.NO_DOCUMENT:
+            return 'SIN DOCUMENTO'
+
+    def save(self, *args, **kwargs):
+        if self.document == '' or self.document is None:
+            self.documentType = 3
+        return super(Client, self).save(*args, **kwargs)
