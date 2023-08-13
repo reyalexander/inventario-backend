@@ -12,6 +12,7 @@ class OrderDetailViewSet(viewsets.ModelViewSet):
     serializer_class = OrderDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['id_order']
 
     def create(self, request, *args, **kwargs):
         data = request.data

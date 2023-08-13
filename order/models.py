@@ -3,6 +3,11 @@ from clients.models import Client
 
 # Create your models here.
 class Order(models.Model):
+    class PaymentType(models.IntegerChoices):
+        Efectivo = 1
+        YAPE = 2
+        Tarjeta = 3
+        Otro = 4
     order_code = models.CharField(max_length=150, blank=True)
     date = models.DateTimeField(auto_now_add=True)
     edited = models.DateTimeField(auto_now=True)

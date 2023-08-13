@@ -1,5 +1,6 @@
 from django_filters import rest_framework as filters
 from datetime import datetime, timedelta
+import django_filters
 from order.models import Order
 
 class OrderFilter(filters.FilterSet):
@@ -7,14 +8,14 @@ class OrderFilter(filters.FilterSet):
     last_weeks = filters.NumberFilter(method='filter_last_weeks')
     last_months = filters.NumberFilter(method='filter_last_months')
     last_years = filters.NumberFilter(method='filter_last_years')
-    specific_date = filters.DateFilter(field_name='date')
+    specific_date = django_filters.DateFilter(field_name='date', lookup_expr='date')
     start_date = filters.DateFilter(field_name='date', lookup_expr='gte')
     end_date = filters.DateFilter(field_name='date', lookup_expr='lte')
     id_client = filters.NumberFilter(field_name='id_client__id')
 
     class Meta:
         model = Order
-        fields = []
+        fields = ['specific_date']
 
     def filter_last_days(self, queryset, name, value):
         today = datetime.now().date()
