@@ -3,6 +3,11 @@ from clients.models import Client
 
 # Create your models here.
 class Order(models.Model):
+    class PaymentType(models.IntegerChoices):
+        Efectivo = 1
+        YAPE = 2
+        Tarjeta = 3
+        Otro = 4
     order_code = models.CharField(max_length=150, blank=True)
     date = models.DateTimeField(auto_now_add=True)
     edited = models.DateTimeField(auto_now=True)
@@ -19,3 +24,18 @@ class Order(models.Model):
         self.deleted = True
         self.save()
  
+    @property
+    def payment_type(self):
+        if self.payment_type == Order.PaymentType.Efectivo:
+            return 'Efectivo'
+        if self.payment_type == Order.PaymentType.YAPE:
+            return 'YAPE'
+        if self.payment_type == Order.PaymentType.Tarjeta:
+            return 'Tarjeta'
+        if self.payment_type == Order.PaymentType.Otro:
+            return 'Otro'
+
+    def save(self, *args, **kwargs):
+        if self.document == '' or self.document is None:
+            self.documentType = 3
+        return super(Client, self).save(*args, **kwargs)

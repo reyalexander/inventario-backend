@@ -9,6 +9,7 @@ class PurchaseDetailViewSet(viewsets.ModelViewSet):
     serializer_class = PurchaseDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['id_purchase']
 
     def create(self, request, *args, **kwargs):
         data = request.data
