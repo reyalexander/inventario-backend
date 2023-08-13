@@ -1,6 +1,5 @@
 from .models import Order
 from .serializers import OrderSerializer
-from .pagination import OrderPagination
 from .filters import OrderFilter
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
@@ -15,10 +14,24 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from io import BytesIO
 from reportlab.platypus import Table, TableStyle, Image
-
 from order_detail.models import OrderDetail
 from user.models import User
 
+from django.db.models import Sum
+from rest_framework.pagination import PageNumberPagination
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 10  # El número de elementos por página
+    page_size_query_param = 'page_size'  # Parámetro para especificar el tamaño de página en la URL
+    max_page_size = 1000  # Tamaño máximo de página
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,  # Total de elementos en la consulta
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data
+        })
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
@@ -26,10 +39,33 @@ class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_class = OrderFilter
+    pagination_class = CustomPageNumberPagination    
 
     def get_queryset(self):
         # Excluir los registros marcados como eliminados
         return Order.objects.filter(deleted=False)
+    
+    @action(detail=False, methods=['get'])
+    def orders_with_total_sum(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        total_sum = queryset.aggregate(total_sum=Sum('total_price'))['total_sum']
+
+        # Accede al atributo 'count' del paginador
+        total_items = queryset.count()
+
+        # Pagina los resultados automáticamente
+        page = self.paginator.paginate_queryset(queryset, request=request)
+
+
+        serializer = OrderSerializer(queryset, many=True)
+        response_data = {
+            'counts': total_items,
+            'total_sum': total_sum,
+            'next': self.paginator.get_next_link(),
+            'previous': self.paginator.get_previous_link(),
+            'results':serializer.data
+        }
+        return Response(response_data)
 
 
 class BoletaPDFView(View):

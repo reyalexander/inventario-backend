@@ -24,18 +24,3 @@ class Order(models.Model):
         self.deleted = True
         self.save()
  
-    @property
-    def payment_type(self):
-        if self.payment_type == Order.PaymentType.Efectivo:
-            return 'Efectivo'
-        if self.payment_type == Order.PaymentType.YAPE:
-            return 'YAPE'
-        if self.payment_type == Order.PaymentType.Tarjeta:
-            return 'Tarjeta'
-        if self.payment_type == Order.PaymentType.Otro:
-            return 'Otro'
-
-    def save(self, *args, **kwargs):
-        if self.document == '' or self.document is None:
-            self.documentType = 3
-        return super(Client, self).save(*args, **kwargs)

@@ -1,13 +1,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from .views import OrderViewSet, BoletaCuadradaPDFView, BoletaPDFView, FacturaPDFView
 
 router = DefaultRouter()
-router.register('', views.OrderViewSet)
+router.register(r'orders', OrderViewSet)
 
 urlpatterns = [
-    path('orders/', include(router.urls)),
-    path('orders/boleta/<int:order_id>/', views.BoletaPDFView.as_view(), name='boleta_pdf'),
-    path('orders/factura/<int:order_id>/', views.FacturaPDFView.as_view(), name='factura_pdf'),
-    path('orders/boletaA4/<int:order_id>/', views.BoletaCuadradaPDFView.as_view(), name='boletaA4_pdf'),
+    path('', include(router.urls)),
+    path('orders/orders_with_total_sum/', OrderViewSet.as_view({'get': 'orders_with_total_sum'}), name='order-list-with-total-sum'),
+    path('orders/boleta/<int:order_id>/', BoletaPDFView.as_view(), name='boleta_pdf'),
+    path('orders/factura/<int:order_id>/', FacturaPDFView.as_view(), name='factura_pdf'),
+    path('orders/boletaA4/<int:order_id>/', BoletaCuadradaPDFView.as_view(), name='boletaA4_pdf'),
 ]
