@@ -12,7 +12,10 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderDetail
-        fields = ['id_order','quantity','new_sale_price','id_product','product_name']
+        fields = ['id','id_order','quantity','new_sale_price','id_product','product_name','manage_stock']
+        extra_kwargs = {
+            'manage_stock': {'required': False, 'default': True}
+        }
 
     def get_product_name(self, obj):
         # Retorna el nombre del cliente asociado a la orden
