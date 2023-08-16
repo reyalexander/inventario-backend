@@ -50,6 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False, null=True)
     dark_mode = models.BooleanField(default=False, null=True)
+    manage_stock = models.BooleanField(default=False, null=True)
 
     objects = UserManager()
 
