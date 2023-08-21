@@ -1,11 +1,11 @@
 # inventario-backend
 Inventory System with E-commerce
 
-## Estado del Proyecto
+## Project Status
 
 En desarrollo
 
-## Instalación
+## Instalation
 
 A continuación se detallan los pasos para configurar el proyecto en un entorno local.
 
@@ -56,7 +56,7 @@ inventario-backend/
 |-- README.md
 |-- requirements.txt
 
-```bash
+```
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE) file for details
