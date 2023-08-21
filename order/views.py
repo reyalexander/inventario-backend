@@ -80,7 +80,7 @@ class BoletaPDFView(View):
 
         # Obtener la imagen de la empresa y mostrarla en la cabecera de la boleta
         try:
-            user = User.objects.get(id=2)  # Reemplaza '1' con el ID de la empresa o la forma en que obtienes el usuario/empresa correcto
+            user = User.objects.get(id=1)  # Reemplaza '1' con el ID de la empresa o la forma en que obtienes el usuario/empresa correcto
             company_image = user.photo
             if company_image:
                 p.drawImage(company_image.path, 350, 650, width=170, height=90)  # Ajusta las coordenadas según el diseño deseado
@@ -147,7 +147,7 @@ class FacturaPDFView(View):
 
         # Obtener la imagen de la empresa y mostrarla en la cabecera de la boleta
         try:
-            user = User.objects.get(id=2)  # Reemplaza '1' con el ID de la empresa o la forma en que obtienes el usuario/empresa correcto
+            user = User.objects.get(id=1)  # Reemplaza '1' con el ID de la empresa o la forma en que obtienes el usuario/empresa correcto
             company_image = user.photo
             if company_image:
                 p.drawImage(company_image.path, 400, 640, width=160, height=80)  # Ajusta las coordenadas según el diseño deseado
@@ -222,7 +222,7 @@ class BoletaCuadradaPDFView(View):
 
         # Obtener la imagen de la empresa y mostrarla en la cabecera de la boleta
         try:
-            user = User.objects.get(id=2)  # Reemplaza '1' con el ID de la empresa o la forma en que obtienes el usuario/empresa correcto
+            user = User.objects.get(id=1)  # Reemplaza '1' con el ID de la empresa o la forma en que obtienes el usuario/empresa correcto
             company_image = user.photo
         except User.DoesNotExist:
             company_image = None
