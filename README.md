@@ -5,7 +5,7 @@ Inventory System with E-commerce
 
 En desarrollo
 
-## Instalation
+## Installation
 
 A continuación se detallan los pasos para configurar el proyecto en un entorno local.
 
