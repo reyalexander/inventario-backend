@@ -11,7 +11,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['name', 'code','description','id_category']
+    filterset_fields = ['name', 'code','description','id_category','category_name']
 
     def get_serializer(self, *args, **kwargs):
         if isinstance(kwargs.get('data', {}), list):
