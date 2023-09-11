@@ -12,7 +12,7 @@ class PurchaseDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PurchaseDetail
-        fields = ['id_purchase','quantity','purchase_price','sale_price','id_product','product_name']
+        fields = ['id','id_purchase','quantity','purchase_price','sale_price','id_product','product_name']
 
     def get_product_name(self, obj):
         # Retorna el nombre del cliente asociado a la orden
