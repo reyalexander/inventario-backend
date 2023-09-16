@@ -208,6 +208,7 @@ db.sqlite3
 __pycache__/
 static/
 media/
+dist/
 
 # migrations only for development
 **/migrations/**

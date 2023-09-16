@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import OrderViewSet, BoletaCuadradaPDFView, BoletaPDFView, FacturaPDFView
+from .views import OrderViewSet, BoletaCuadradaPDFView, BoletaPDFView, FacturaPDFView, ReportsProductAPIView
 
 router = DefaultRouter()
 router.register(r'orders', OrderViewSet)
@@ -11,4 +11,5 @@ urlpatterns = [
     path('orders/boleta/<int:order_id>/', BoletaPDFView.as_view(), name='boleta_pdf'),
     path('orders/factura/<int:order_id>/', FacturaPDFView.as_view(), name='factura_pdf'),
     path('orders/boletaA4/<int:order_id>/', BoletaCuadradaPDFView.as_view(), name='boletaA4_pdf'),
+    path('orders/report/', ReportsProductAPIView.post, name='report'),
 ]
