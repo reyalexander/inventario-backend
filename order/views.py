@@ -4,6 +4,8 @@ from .filters import OrderFilter
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
 from django.views import View
@@ -13,9 +15,15 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from io import BytesIO
+from datetime import datetime
 from reportlab.platypus import Table, TableStyle, Image
 from order_detail.models import OrderDetail
 from user.models import User
+
+from xhtml2pdf import pisa
+from jinja2 import Environment, FileSystemLoader
+from django.template.loader import render_to_string
+from django.views.decorators.csrf import csrf_exempt
 
 from django.db.models import Sum
 from rest_framework.pagination import PageNumberPagination
@@ -273,4 +281,31 @@ class BoletaCuadradaPDFView(View):
 
         # Devolver el PDF como respuesta
         response.write(pdf)
+        return response
+    
+
+
+class ReportsProductAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        return self.render_to_pdf(request)
+
+    def render_to_pdf(self, request):
+        
+        template_path = 'products_report.html'
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Report.pdf"'
+
+        data = {
+            'filename': "REPORTE-PRODUCTOS",
+            'products': "serializedProducts",
+            'reportDate': datetime.now(),
+            'total': "1200"
+        }
+        html = render_to_string(template_path, data)
+
+        pisaStatus = pisa.CreatePDF(html, dest=response)
+
         return response

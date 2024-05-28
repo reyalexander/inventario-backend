@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     'user',
 ]
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ORIGIN_ALLOW_ALL = True  # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
+CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -73,7 +75,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-'''
 CORS_ALLOW_HEADERS = (
     'accept',
     'accept-encoding',
@@ -85,7 +86,7 @@ CORS_ALLOW_HEADERS = (
     'x-csrftoken',
     'x-requested-with',
 )
-
+'''
 CORS_URLS_REGEX = r'^.*$'
 '''
 
