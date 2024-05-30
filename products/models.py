@@ -16,3 +16,15 @@ class Product(models.Model):
 
     class Meta:
         ordering = ['-id']
+
+    def generate_product_code(self):
+        product_id = self.id
+        self.code = f"PR-000{product_id:02d}"
+        self.save(update_fields=['code'])
+
+    def save(self, *args, **kwargs):
+        if not self.code:   ### PR-0001
+            super().save(*args, **kwargs)  # Guarda el objeto primero para obtener un ID asignado
+            self.generate_product_code()  # Genera el código de parte después de que el objeto se haya guardado
+        else:
+            super().save(*args, **kwargs)

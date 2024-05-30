@@ -1,4 +1,6 @@
 from .models import Order
+from products.models import Product
+from django.shortcuts import render
 from .serializers import OrderSerializer
 from .filters import OrderFilter
 from rest_framework import viewsets, permissions, status
@@ -22,7 +24,7 @@ from user.models import User
 
 from xhtml2pdf import pisa
 from jinja2 import Environment, FileSystemLoader
-from django.template.loader import render_to_string
+from django.template.loader import render_to_string, get_template
 from django.views.decorators.csrf import csrf_exempt
 
 from django.db.models import Sum
@@ -308,4 +310,44 @@ class ReportsProductAPIView(APIView):
 
         pisaStatus = pisa.CreatePDF(html, dest=response)
 
+        return response
+    
+class ShowProducts(View):
+    permission_classes = [permissions.AllowAny]
+    def show_products(request):
+
+        
+        products = Product.objects.all()
+
+        context = {
+            'products': products
+        }
+
+        return render(request, 'showInfo.html', context)
+
+
+class PdfCreate(View):
+    permission_classes = [IsAuthenticated]
+    def pdf_report_create(request):
+
+        products = Product.objects.all()
+
+        template_path = 'pdfReport.html'
+
+        context = {'products': products}
+
+        response = HttpResponse(content_type='application/pdf')
+
+        response['Content-Disposition'] = 'filename="products_report.pdf"'
+
+        template = get_template(template_path)
+
+        html = template.render(context)
+
+        # create a pdf
+        pisa_status = pisa.CreatePDF(
+        html, dest=response)
+        # if error then show some funy view
+        if pisa_status.err:
+            return HttpResponse('We had some errors <pre>' + html + '</pre>')
         return response
