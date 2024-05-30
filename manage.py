@@ -18,5 +18,10 @@ def main():
     execute_from_command_line(sys.argv)
 
 
+if len(sys.argv) == 1:
+    sys.argv += ['runserver', '8001']
+elif len(sys.argv) == 2 and sys.argv[1] == 'runserver':
+    sys.argv.append('8001')
+
 if __name__ == '__main__':
     main()
