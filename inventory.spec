@@ -1,5 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_submodules
+
+block_cipher = None
+
+# Collect all submodules from reportlab.graphics.barcode
+hiddenimports = collect_submodules('reportlab.graphics.barcode')
 
 block_cipher = None
 
@@ -8,8 +14,18 @@ a = Analysis(
     ['manage.py'],
     pathex=[],
     binaries=[],
-    datas=[],
-    hiddenimports=[],
+    datas=[
+        ('inventory/settings.py', 'inventory'),
+        # Include ReportLab fonts and encodings
+        ('venv/Lib/site-packages/reportlab/fonts', 'reportlab/fonts'),
+        ('venv/Lib/site-packages/reportlab/platypus', 'reportlab/platypus'),
+        ('venv/Lib/site-packages/reportlab/pdfbase', 'reportlab/pdfbase'),
+        # Include additional ReportLab barcode modules
+        ('venv/Lib/site-packages/reportlab/graphics/barcode/code128.py', 'reportlab/graphics/barcode'),
+        ('venv/Lib/site-packages/reportlab/graphics/barcode/code39.py', 'reportlab/graphics/barcode'),
+        ('venv/Lib/site-packages/reportlab/graphics/barcode/code93.py', 'reportlab/graphics/barcode'),
+    ],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -38,13 +54,4 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='inventory',
-)
+coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, strip=False, upx=True, upx_exclude=[], name='inventory')

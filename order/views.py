@@ -3,7 +3,7 @@ from products.models import Product
 from django.shortcuts import render
 from .serializers import OrderSerializer
 from .filters import OrderFilter
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -23,7 +23,6 @@ from order_detail.models import OrderDetail
 from user.models import User
 
 from xhtml2pdf import pisa
-from jinja2 import Environment, FileSystemLoader
 from django.template.loader import render_to_string, get_template
 from django.views.decorators.csrf import csrf_exempt
 
