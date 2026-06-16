@@ -1,8 +1,7 @@
-from yaml import serializer
-
-from .models import Order
+from .models import Order, CashClosure
 from apps.products.models import Product
 from django.shortcuts import render
+from django.utils import timezone
 from .serializers import OrderSerializer
 from .filters import OrderFilter
 from rest_framework import viewsets, permissions
@@ -15,8 +14,8 @@ from django.http import HttpResponse
 from django.views import View
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from io import BytesIO
 from datetime import datetime
@@ -24,12 +23,17 @@ from reportlab.platypus import Table, TableStyle, Image
 from apps.order_detail.models import OrderDetail
 from apps.user.models import User
 
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.units import mm
+
 from xhtml2pdf import pisa
 from django.template.loader import render_to_string, get_template
-from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 
-from django.db.models import Sum
+from django.db.models import Sum, Count
+from decimal import Decimal
 from rest_framework.pagination import PageNumberPagination
+
 
 class CustomPageNumberPagination(PageNumberPagination):
     page_size = 10  # El número de elementos por página
@@ -53,8 +57,24 @@ class OrderViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPageNumberPagination    
 
     def get_queryset(self):
-        # Excluir los registros marcados como eliminados
-        return Order.objects.filter(deleted=False)
+        queryset = Order.objects.filter(deleted=False).order_by("-date")
+
+        has_filters = any([
+            self.request.query_params.get("specific_date"),
+            self.request.query_params.get("start_date"),
+            self.request.query_params.get("end_date"),
+            self.request.query_params.get("last_days"),
+            self.request.query_params.get("last_weeks"),
+            self.request.query_params.get("last_months"),
+            self.request.query_params.get("last_years"),
+            self.request.query_params.get("id_client"),
+        ])
+
+        if not has_filters:
+            today = timezone.localdate()
+            queryset = queryset.filter(date__date=today)
+
+        return queryset
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -96,23 +116,226 @@ class OrderViewSet(viewsets.ModelViewSet):
         if order.user and order.user != request.user and not (request.user.is_admin or request.user.is_superuser):
             return Response({"detail": "Solo puede anular la orden el usuario que la creó."}, status=403)
 
-        order.cancel(user=request.user, reason=reason)
-        serializer = self.get_serializer(order)
-        return Response(serializer.data)
+        try:
+            with transaction.atomic():
+                order_details = OrderDetail.objects.select_related("id_product").filter(id_order=order)
+
+                for detail in order_details:
+                    product = detail.id_product
+
+                    # devolver stock vendido
+                    product.stock = (product.stock or 0) + (detail.quantity or 0)
+                    product.save(update_fields=["stock"])
+
+                order.cancel(user=request.user, reason=reason)
+
+            serializer = self.get_serializer(order)
+            return Response(serializer.data)
+
+        except Exception as e:
+            return Response(
+                {"detail": f"No se pudo anular la orden: {str(e)}"},
+                status=500
+            )
+    
+    def _build_daily_cash_summary(self, user, target_date):
+        orders = Order.objects.filter(
+            deleted=False,
+            canceled=False,
+            user=user,
+            date__date=target_date
+        )
+
+        payment_map = {
+            1: "Efectivo",
+            2: "Yape",
+            3: "Plin",
+            4: "Transferencia",
+            5: "Tarjeta",
+        }
+
+        grouped = (
+            orders.values("payment_type")
+            .annotate(
+                total=Sum("total_price"),
+                count=Count("id")
+            )
+            .order_by("payment_type")
+        )
+
+        grouped_dict = {item["payment_type"]: item for item in grouped}
+
+        items = []
+        total_general = Decimal("0.00")
+        total_sales_count = 0
+
+        totals_by_payment = {
+            1: Decimal("0.00"),
+            2: Decimal("0.00"),
+            3: Decimal("0.00"),
+            4: Decimal("0.00"),
+            5: Decimal("0.00"),
+        }
+
+        for payment_id, payment_name in payment_map.items():
+            item = grouped_dict.get(payment_id, {})
+            total = Decimal(str(item.get("total") or 0))
+            count = int(item.get("count") or 0)
+
+            totals_by_payment[payment_id] = total
+            total_general += total
+            total_sales_count += count
+
+            items.append({
+                "payment_type": payment_id,
+                "payment_name": payment_name,
+                "count": count,
+                "total": float(total),
+            })
+
+        return {
+            "items": items,
+            "total_general": total_general,
+            "total_sales_count": total_sales_count,
+            "expected_cash": totals_by_payment[1],
+            "expected_yape": totals_by_payment[2],
+            "expected_plin": totals_by_payment[3],
+            "expected_transfer": totals_by_payment[4],
+            "expected_card": totals_by_payment[5],
+        }
+
+    @action(detail=False, methods=["get"], url_path="daily-cash-report")
+    def daily_cash_report(self, request):
+        date_str = request.query_params.get("date")
+        target_date = timezone.localdate()
+
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                return Response(
+                    {"detail": "La fecha debe tener formato YYYY-MM-DD."},
+                    status=400
+                )
+
+        summary = self._build_daily_cash_summary(request.user, target_date)
+
+        closure = CashClosure.objects.filter(
+            user=request.user,
+            closure_date=target_date
+        ).first()
+
+        closure_data = None
+        if closure:
+            closure_data = {
+                "id": closure.id,
+                "closure_date": closure.closure_date.strftime("%Y-%m-%d"),
+                "expected_cash": float(closure.expected_cash or 0),
+                "expected_yape": float(closure.expected_yape or 0),
+                "expected_plin": float(closure.expected_plin or 0),
+                "expected_transfer": float(closure.expected_transfer or 0),
+                "expected_card": float(closure.expected_card or 0),
+                "total_expected": float(closure.total_expected or 0),
+                "counted_cash": float(closure.counted_cash or 0),
+                "cash_difference": float(closure.cash_difference or 0),
+                "note": closure.note or "",
+                "closed_at": timezone.localtime(closure.closed_at).strftime("%d/%m/%Y %H:%M:%S"),
+            }
+
+        return Response({
+            "date": target_date.strftime("%Y-%m-%d"),
+            "user_id": request.user.id,
+            "user_name": (
+                f"{request.user.first_name or ''} {request.user.last_name or ''}".strip()
+                or getattr(request.user, "username", "")
+                or "Usuario"
+            ),
+            "total_sales_count": summary["total_sales_count"],
+            "total_general": float(summary["total_general"]),
+            "items": summary["items"],
+            "expected_cash": float(summary["expected_cash"]),
+            "expected_yape": float(summary["expected_yape"]),
+            "expected_plin": float(summary["expected_plin"]),
+            "expected_transfer": float(summary["expected_transfer"]),
+            "expected_card": float(summary["expected_card"]),
+            "closure": closure_data,
+        })
+
+    @action(detail=False, methods=["post"], url_path="daily-cash-closure")
+    def daily_cash_closure(self, request):
+        date_str = request.data.get("date")
+        target_date = timezone.localdate()
+
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                return Response(
+                    {"detail": "La fecha debe tener formato YYYY-MM-DD."},
+                    status=400
+                )
+
+        counted_cash = request.data.get("counted_cash", 0)
+        note = str(request.data.get("note", "") or "").strip()
+
+        try:
+            counted_cash = Decimal(str(counted_cash or 0))
+        except Exception:
+            return Response(
+                {"detail": "El efectivo contado no es válido."},
+                status=400
+            )
+
+        if counted_cash < 0:
+            return Response(
+                {"detail": "El efectivo contado no puede ser negativo."},
+                status=400
+            )
+
+        summary = self._build_daily_cash_summary(request.user, target_date)
+
+        expected_cash = summary["expected_cash"]
+        expected_yape = summary["expected_yape"]
+        expected_plin = summary["expected_plin"]
+        expected_transfer = summary["expected_transfer"]
+        expected_card = summary["expected_card"]
+        total_expected = summary["total_general"]
+
+        cash_difference = counted_cash - expected_cash
+
+        closure, _created = CashClosure.objects.update_or_create(
+            user=request.user,
+            closure_date=target_date,
+            defaults={
+                "expected_cash": expected_cash,
+                "expected_yape": expected_yape,
+                "expected_plin": expected_plin,
+                "expected_transfer": expected_transfer,
+                "expected_card": expected_card,
+                "total_expected": total_expected,
+                "counted_cash": counted_cash,
+                "cash_difference": cash_difference,
+                "note": note,
+            }
+        )
+
+        return Response({
+            "id": closure.id,
+            "date": closure.closure_date.strftime("%Y-%m-%d"),
+            "expected_cash": float(closure.expected_cash),
+            "expected_yape": float(closure.expected_yape),
+            "expected_plin": float(closure.expected_plin),
+            "expected_transfer": float(closure.expected_transfer),
+            "expected_card": float(closure.expected_card),
+            "total_expected": float(closure.total_expected),
+            "counted_cash": float(closure.counted_cash),
+            "cash_difference": float(closure.cash_difference),
+            "note": closure.note or "",
+            "closed_at": timezone.localtime(closure.closed_at).strftime("%d/%m/%Y %H:%M:%S"),
+        }, status=200)
 
 
-from io import BytesIO
-from django.http import HttpResponse
-from django.views import View
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from apps.order.models import Order
-from apps.order_detail.models import OrderDetail
-from apps.user.models import User
-
+############################################
 
 class BoletaPDFView(View):
     def get(self, request, order_id):
@@ -235,8 +458,10 @@ class BoletaPDFView(View):
 
         # Datos cliente
         elements.append(Paragraph(f"<b>Cliente:</b> {order.id_client.name}", normal_left))
-        elements.append(Paragraph(f"<b>Fecha:</b> {order.date.strftime('%d/%m/%Y %H:%M:%S')}", normal_left))
 
+        local_order_date = timezone.localtime(order.date)
+        
+        elements.append(Paragraph(f"<b>Fecha:</b> {local_order_date.strftime('%d/%m/%Y %H:%M:%S')}", normal_left))
         if getattr(order.id_client, 'document', None):
             elements.append(Paragraph(f"<b>Doc:</b> {order.id_client.document}", normal_left))
 
@@ -273,7 +498,7 @@ class BoletaPDFView(View):
         )
 
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.black),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 8),
@@ -294,6 +519,7 @@ class BoletaPDFView(View):
         discount = order.discount or 0
         final_total = order.total_price if order.total_price is not None else (total_orden - discount)
 
+        elements.append(Paragraph(f"SubTotal: S/. {total_orden:.2f}", total_style))
         elements.append(Paragraph(f"Dcto: S/. {discount:.2f}", total_style))
         elements.append(Paragraph(f"Total: S/. {final_total:.2f}", total_style))
         elements.append(Spacer(1, 3 * mm))

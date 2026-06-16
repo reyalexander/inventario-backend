@@ -65,15 +65,28 @@ class ProductViewSet(viewsets.ModelViewSet):
     
 
 
+from io import BytesIO
+
+from django.http import HttpResponse
+from django.views import View
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Flowable
+from reportlab.graphics.barcode import code128
+
+from .models import Product
+
+
 class BarcodeFlowable(Flowable):
-    def __init__(self, value, bar_width=0.24 * mm, bar_height=6 * mm):
+    def __init__(self, value, bar_width=0.26 * mm, bar_height=8 * mm, human_readable=False):
         super().__init__()
         self.value = value
         self.barcode = code128.Code128(
             value,
             barWidth=bar_width,
             barHeight=bar_height,
-            humanReadable=True
+            humanReadable=human_readable,
         )
         self.width = self.barcode.width
         self.height = self.barcode.height
@@ -82,15 +95,16 @@ class BarcodeFlowable(Flowable):
         return self.width, self.height
 
     def draw(self):
-        self.barcode.drawOn(self.canv, 0, 0)
+        x = 0
+        self.barcode.drawOn(self.canv, x, 0)
 
-# ProductLabel30x20PDFView
+
 class ProductLabel30x20PDFView(View):
     def get(self, request, product_id):
         product = Product.objects.get(pk=product_id, deleted=False)
 
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="label_{product.code}.pdf"'
+        response = HttpResponse(content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="label_{product.code}.pdf"'
 
         buffer = BytesIO()
 
@@ -100,8 +114,8 @@ class ProductLabel30x20PDFView(View):
         doc = SimpleDocTemplate(
             buffer,
             pagesize=(ticket_width, ticket_height),
-            leftMargin=1 * mm,
-            rightMargin=1 * mm,
+            leftMargin=1.2 * mm,
+            rightMargin=1.2 * mm,
             topMargin=1 * mm,
             bottomMargin=1 * mm,
         )
@@ -109,53 +123,48 @@ class ProductLabel30x20PDFView(View):
         styles = getSampleStyleSheet()
 
         title_style = ParagraphStyle(
-            'TitleStyle',
-            parent=styles['Normal'],
-            fontName='Helvetica-Bold',
-            fontSize=6.5,
-            leading=7,
+            "TitleStyle",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=5.8,
+            leading=6.2,
             alignment=TA_CENTER,
-            spaceAfter=3,
+            spaceAfter=1.2 * mm,
         )
 
-        """ code_style = ParagraphStyle(
-            'CodeStyle',
-            parent=styles['Normal'],
-            fontName='Helvetica',
-            fontSize=5.5,
-            leading=6,
+        code_style = ParagraphStyle(
+            "CodeStyle",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=5.8,
+            leading=5,
             alignment=TA_CENTER,
-            spaceAfter=1,
-        ) """
+            spaceAfter=0,
+        )
 
         elements = []
 
-        # Nombre corto o recortado
-        product_name = (product.name[:22] + "...") if len(product.name) > 22 else product.name
-        elements.append(Paragraph(product_name.upper(), title_style))
-        #elements.append(Paragraph(product.code, code_style))
+        # nombre recortado
+        product_name = product.name.strip().upper()
+        if len(product_name) > 20:
+            product_name = product_name[:20] + "..."
 
+        elements.append(Paragraph(product_name, title_style))
+
+        # barcode en vector, más nítido para PDF
         barcode_widget = BarcodeFlowable(
             product.code,
-            bar_width=0.24 * mm,
-            bar_height=6 * mm
+            bar_width=0.25 * mm,
+            bar_height=7.2 * mm,
+            human_readable=False,  # mejor dejar el texto aparte
         )
 
-        barcode_table = Table(
-            [[barcode_widget]],
-            colWidths=[28 * mm],  # ancho útil dentro de etiqueta de 30mm con márgenes
-        )
+        # centrar manualmente
+        barcode_widget.hAlign = "CENTER"
+        elements.append(barcode_widget)
 
-        barcode_table.setStyle(TableStyle([
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-        ]))
-
-        elements.append(barcode_table)
+        elements.append(Spacer(1, 0.6 * mm))
+        elements.append(Paragraph(f"{product.code}  - S/. {product.price:.2f}", code_style))
 
         doc.build(elements)
 

@@ -17,7 +17,7 @@ class Client(models.Model):
     deleted = models.BooleanField(default=False, null=True)
 
     class Meta:
-        ordering = ['-id']
+        ordering = ['id']
 
     @property
     def document_type(self):

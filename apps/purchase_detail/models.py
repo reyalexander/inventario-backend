@@ -2,7 +2,7 @@ from django.db import models
 from apps.products.models import Product
 from apps.purchase.models import Purchase
 
-# Create your models here.
+
 class PurchaseDetail(models.Model):
     id_purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE)
     id_product = models.ForeignKey(Product, on_delete=models.CASCADE)

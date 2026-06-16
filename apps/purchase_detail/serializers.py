@@ -1,19 +1,37 @@
 from rest_framework import serializers
 from .models import PurchaseDetail
-from apps.products.models import Product
 
-class ProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = '__all__'
 
 class PurchaseDetailSerializer(serializers.ModelSerializer):
-    product_name = serializers.SerializerMethodField()
+    product_name = serializers.CharField(source="id_product.name", read_only=True)
+    product_code = serializers.CharField(source="id_product.code", read_only=True)
+    product_stock = serializers.IntegerField(source="id_product.stock", read_only=True)
 
     class Meta:
         model = PurchaseDetail
-        fields = ['id','id_purchase','quantity','purchase_price','sale_price','id_product','product_name']
+        fields = [
+            "id",
+            "id_purchase",
+            "id_product",
+            "product_name",
+            "product_code",
+            "product_stock",
+            "quantity",
+            "purchase_price",
+            "sale_price",
+        ]
 
-    def get_product_name(self, obj):
-        # Retorna el nombre del cliente asociado a la orden
-        return obj.id_product.name if obj.id_product else None
+    def validate_quantity(self, value):
+        if value is None or value <= 0:
+            raise serializers.ValidationError("La cantidad debe ser mayor a 0.")
+        return value
+
+    def validate_purchase_price(self, value):
+        if value is None or value < 0:
+            raise serializers.ValidationError("El precio de compra no puede ser negativo.")
+        return value
+
+    def validate_sale_price(self, value):
+        if value is None or value < 0:
+            raise serializers.ValidationError("El precio de venta no puede ser negativo.")
+        return value

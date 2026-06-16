@@ -9,10 +9,11 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     product_name = serializers.SerializerMethodField()
+    product_stock = serializers.IntegerField(source="id_product.stock", read_only=True)
 
     class Meta:
         model = OrderDetail
-        fields = ['id','id_order','quantity','new_sale_price','id_product','product_name','manage_stock']
+        fields = ['id','id_order','quantity','new_sale_price','id_product','product_name','product_stock','manage_stock']
         extra_kwargs = {
             'manage_stock': {'required': False, 'default': True}
         }

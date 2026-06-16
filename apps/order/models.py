@@ -82,3 +82,39 @@ class Order(models.Model):
             self.user = user
 
         self.save(update_fields=["canceled", "cancel_reason", "canceled_at", "user", "edited"])
+
+class CashClosure(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="cash_closures"
+    )
+    closure_date = models.DateField()
+
+    expected_cash = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    expected_yape = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    expected_plin = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    expected_transfer = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    expected_card = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_expected = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    counted_cash = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cash_difference = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    note = models.TextField(blank=True, null=True)
+
+    closed_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "cash_closure"
+        ordering = ["-closure_date", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "closure_date"],
+                name="unique_cash_closure_user_date"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.closure_date}"

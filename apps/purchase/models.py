@@ -1,10 +1,10 @@
 from django.db import models
 from apps.providers.models import Provider
 
-# Create your models here.
+
 class Purchase(models.Model):
     id_provider = models.ForeignKey(Provider, on_delete=models.CASCADE)
-    order_code = models.CharField(max_length=150, blank=True) #purchase_code
+    order_code = models.CharField(max_length=150, blank=True)
     evidence = models.ImageField(upload_to='purchase', blank=True, null=True)
     detail = models.CharField(max_length=250, blank=True)
     total_price = models.DecimalField(max_digits=9, decimal_places=2, default=0)
@@ -14,14 +14,13 @@ class Purchase(models.Model):
     class Meta:
         ordering = ['-id']
 
-    def generate_order_code(self):
-        purchase_id = self.id
-        self.order_code = f"PU-00{purchase_id:03d}"
-        self.save(update_fields=['order_code'])
+    def generate_order_code_value(self):
+        return f"PU-{self.id:05d}"
 
     def save(self, *args, **kwargs):
-        if not self.order_code:   ### M&M-C0033-R1-P001
-            super().save(*args, **kwargs)  # Guarda el objeto primero para obtener un ID asignado
-            self.generate_order_code()  # Genera el código de parte después de que el objeto se haya guardado
-        else:
-            super().save(*args, **kwargs)
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        if is_new and not self.order_code:
+            self.order_code = self.generate_order_code_value()
+            super().save(update_fields=["order_code"])

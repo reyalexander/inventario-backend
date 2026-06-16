@@ -21,7 +21,7 @@ class Product(models.Model):
         ordering = ["-id"]
 
     def generate_product_code_value(self):
-        return f"PRO-{self.id:06d}"
+        return f"PR{self.id:05d}"
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

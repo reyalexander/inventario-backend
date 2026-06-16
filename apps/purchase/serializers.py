@@ -1,19 +1,21 @@
 from rest_framework import serializers
-from apps.purchase.models import Purchase
-from apps.providers.models import Provider
+from .models import Purchase
 
-class ProviderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Provider
-        fields = '__all__'
 
 class PurchaseSerializer(serializers.ModelSerializer):
-    provider_name = serializers.SerializerMethodField()
+    provider_name = serializers.CharField(source="id_provider.name", read_only=True)
 
     class Meta:
         model = Purchase
-        fields = ['id', 'order_code', 'evidence', 'detail', 'date', 'deleted', 'id_provider', 'provider_name']
-
-    def get_provider_name(self, obj):
-        # Retorna el nombre del proveedor asociado a la compra
-        return obj.id_provider.name if obj.id_provider else None
+        fields = [
+            "id",
+            "id_provider",
+            "provider_name",
+            "order_code",
+            "evidence",
+            "detail",
+            "total_price",
+            "date",
+            "deleted",
+        ]
+        read_only_fields = ["order_code", "total_price", "date"]
