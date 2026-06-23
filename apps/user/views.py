@@ -14,6 +14,9 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['is_staff', 'is_admin', 'is_superuser', 'is_active']
 
+    def is_admin_user(self, user):
+        return bool(user.is_superuser or user.is_admin)
+
     def create(self, request, *args, **kwargs):
         if not request.user.is_superuser and not request.user.is_admin:
             return Response(
@@ -50,9 +53,27 @@ class UserViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.data)
 
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+
+        if self.is_admin_user(user):
+            return Response(
+                {"detail": "No se puede eliminar un usuario administrador."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return super().destroy(request, *args, **kwargs)
+
     @action(detail=True, methods=['patch'], url_path='toggle-active')
     def toggle_active(self, request, pk=None):
         user = self.get_object()
+
+        if self.is_admin_user(user):
+            return Response(
+                {"detail": "No se puede activar o desactivar un usuario administrador."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         user.is_active = not user.is_active
         user.save(update_fields=['is_active'])
         return Response({

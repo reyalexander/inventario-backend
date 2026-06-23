@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from .serializers import OrderSerializer
 from .filters import OrderFilter
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -58,6 +58,9 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Order.objects.filter(deleted=False).order_by("-date")
+
+        if self.action in ["retrieve", "update", "partial_update", "destroy", "cancel_order"]:
+            return queryset
 
         has_filters = any([
             self.request.query_params.get("specific_date"),
@@ -136,6 +139,36 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response(
                 {"detail": f"No se pudo anular la orden: {str(e)}"},
                 status=500
+            )
+
+    def destroy(self, request, *args, **kwargs):
+        if not (request.user.is_admin or request.user.is_superuser):
+            return Response(
+                {"detail": "Solo el administrador puede eliminar órdenes."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        order = self.get_object()
+
+        try:
+            with transaction.atomic():
+                if not order.canceled:
+                    order_details = OrderDetail.objects.select_related("id_product").filter(id_order=order)
+
+                    for detail in order_details:
+                        product = detail.id_product
+                        product.stock = (product.stock or 0) + (detail.quantity or 0)
+                        product.save(update_fields=["stock"])
+
+                order.deleted = True
+                order.save(update_fields=["deleted", "edited"])
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        except Exception as e:
+            return Response(
+                {"detail": f"No se pudo eliminar la orden: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
     def _build_daily_cash_summary(self, user, target_date):
@@ -338,8 +371,16 @@ class OrderViewSet(viewsets.ModelViewSet):
 ############################################
 
 class BoletaPDFView(View):
+    def get_seller_name(self, order):
+        seller = getattr(order, "user", None)
+        if not seller:
+            return "-"
+
+        full_name = f"{seller.first_name or ''} {seller.last_name or ''}".strip()
+        return full_name or getattr(seller, "username", "") or "-"
+
     def get(self, request, order_id):
-        order = Order.objects.get(pk=order_id)
+        order = Order.objects.select_related("user", "id_client").get(pk=order_id)
         order_details = OrderDetail.objects.filter(id_order=order)
 
         response = HttpResponse(content_type='application/pdf')
@@ -360,8 +401,8 @@ class BoletaPDFView(View):
             pagesize=(ticket_width, ticket_height),
             leftMargin=2 * mm,
             rightMargin=2 * mm,
-            topMargin=3 * mm,
-            bottomMargin=4 * mm,
+            topMargin=2 * mm,
+            bottomMargin=2 * mm,
         )
 
         elements = []
@@ -430,7 +471,7 @@ class BoletaPDFView(View):
         # Logo
         if company_image:
             try:
-                image = Image(company_image.path, width=30 * mm, height=18 * mm)
+                image = Image(company_image.path, width=30 * mm, height=30 * mm)
                 image.hAlign = 'CENTER'
                 elements.append(image)
                 elements.append(Spacer(1, 2 * mm))
@@ -439,9 +480,9 @@ class BoletaPDFView(View):
 
         # Cabecera empresa
         if user:
-            full_name = f"{(user.first_name or '').upper()} {(user.last_name or '').upper()}".strip()
-            if full_name:
-                elements.append(Paragraph(full_name, title_style))
+            #full_name = f"{(user.first_name or '').upper()} {(user.last_name or '').upper()}".strip()
+            #if full_name:
+            #    elements.append(Paragraph(full_name, title_style))
 
             if getattr(user, 'address', None):
                 elements.append(Paragraph(user.address.upper(), normal_center))
@@ -467,6 +508,9 @@ class BoletaPDFView(View):
 
         if getattr(order.id_client, 'address', None):
             elements.append(Paragraph(f"<b>Dir:</b> {order.id_client.address}", small_left))
+        
+        # Datos vendedor
+        elements.append(Paragraph(f"<b>Vendedor:</b> {self.get_seller_name(order)}", normal_left))
 
         elements.append(Spacer(1, 2 * mm))
 

@@ -72,6 +72,8 @@ from django.views import View
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.lib.utils import simpleSplit
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Flowable
 from reportlab.graphics.barcode import code128
 
@@ -99,6 +101,58 @@ class BarcodeFlowable(Flowable):
         self.barcode.drawOn(self.canv, x, 0)
 
 
+class TextLinesFlowable(Flowable):
+    def __init__(self, lines, font_name, font_size, leading, width):
+        super().__init__()
+        self.lines = lines
+        self.font_name = font_name
+        self.font_size = font_size
+        self.leading = leading
+        self.width = width
+        self.height = leading * max(1, len(lines))
+
+    def wrap(self, availWidth, availHeight):
+        return self.width, self.height
+
+    def draw(self):
+        self.canv.setFont(self.font_name, self.font_size)
+        for index, line in enumerate(self.lines):
+            line_width = stringWidth(line, self.font_name, self.font_size)
+            x = max((self.width - line_width) / 2, 0)
+            y = self.height - self.font_size - (index * self.leading)
+            self.canv.drawString(x, y, line)
+
+
+def truncate_line_to_width(line, style, max_width, suffix="..."):
+    line = line.rstrip()
+
+    if stringWidth(line, style.fontName, style.fontSize) <= max_width:
+        return line
+
+    while line and stringWidth(f"{line}{suffix}", style.fontName, style.fontSize) > max_width:
+        line = line[:-1].rstrip()
+
+    return f"{line}{suffix}" if line else suffix
+
+
+def fit_product_name_lines(text, style, max_width, max_lines=2):
+    clean_text = " ".join((text or "").strip().upper().split()) or "-"
+    lines = simpleSplit(clean_text, style.fontName, style.fontSize, max_width)
+
+    if len(lines) <= max_lines:
+        return [truncate_line_to_width(line, style, max_width) for line in (lines or ["-"])]
+
+    fitted_lines = lines[:max_lines]
+    fitted_lines = [truncate_line_to_width(line, style, max_width, suffix="") for line in fitted_lines]
+    last_line = fitted_lines[-1].rstrip()
+
+    while last_line and stringWidth(f"{last_line}...", style.fontName, style.fontSize) > max_width:
+        last_line = last_line[:-1].rstrip()
+
+    fitted_lines[-1] = f"{last_line}..." if last_line else "..."
+    return fitted_lines
+
+
 class ProductLabel30x20PDFView(View):
     def get(self, request, product_id):
         product = Product.objects.get(pk=product_id, deleted=False)
@@ -114,10 +168,10 @@ class ProductLabel30x20PDFView(View):
         doc = SimpleDocTemplate(
             buffer,
             pagesize=(ticket_width, ticket_height),
-            leftMargin=1.2 * mm,
-            rightMargin=1.2 * mm,
-            topMargin=1 * mm,
-            bottomMargin=1 * mm,
+            leftMargin=1 * mm,
+            rightMargin=1 * mm,
+            topMargin=0.8 * mm,
+            bottomMargin=0.8 * mm,
         )
 
         styles = getSampleStyleSheet()
@@ -126,17 +180,17 @@ class ProductLabel30x20PDFView(View):
             "TitleStyle",
             parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=5.8,
-            leading=6.2,
+            fontSize=5.4,
+            leading=5.6,
             alignment=TA_CENTER,
-            spaceAfter=1.2 * mm,
+            spaceAfter=0.4 * mm,
         )
 
         code_style = ParagraphStyle(
             "CodeStyle",
             parent=styles["Normal"],
             fontName="Helvetica",
-            fontSize=5.8,
+            fontSize=5.4,
             leading=5,
             alignment=TA_CENTER,
             spaceAfter=0,
@@ -144,18 +198,25 @@ class ProductLabel30x20PDFView(View):
 
         elements = []
 
-        # nombre recortado
-        product_name = product.name.strip().upper()
-        if len(product_name) > 20:
-            product_name = product_name[:20] + "..."
-
-        elements.append(Paragraph(product_name, title_style))
+        usable_width = ticket_width - doc.leftMargin - doc.rightMargin
+        product_name_lines = fit_product_name_lines(product.name, title_style, usable_width)
+        elements.append(
+            TextLinesFlowable(
+                product_name_lines,
+                title_style.fontName,
+                title_style.fontSize,
+                title_style.leading,
+                usable_width,
+            )
+        )
+        elements.append(Spacer(1, 0.35 * mm))
 
         # barcode en vector, más nítido para PDF
+        barcode_height = 6.6 * mm if len(product_name_lines) > 1 else 7.2 * mm
         barcode_widget = BarcodeFlowable(
             product.code,
             bar_width=0.25 * mm,
-            bar_height=7.2 * mm,
+            bar_height=barcode_height,
             human_readable=False,  # mejor dejar el texto aparte
         )
 
@@ -163,7 +224,7 @@ class ProductLabel30x20PDFView(View):
         barcode_widget.hAlign = "CENTER"
         elements.append(barcode_widget)
 
-        elements.append(Spacer(1, 0.6 * mm))
+        elements.append(Spacer(1, 0.35 * mm))
         elements.append(Paragraph(f"{product.code}  - S/. {product.price:.2f}", code_style))
 
         doc.build(elements)

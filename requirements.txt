@@ -22,6 +22,7 @@ djangorestframework-simplejwt==5.2.2
 drf-yasg==1.21.6
 html5lib==1.1
 idna==3.4
+importlib_metadata==8.7.1
 inflection==0.5.1
 itypes==1.2.0
 Jinja2==3.1.2
@@ -35,11 +36,12 @@ Pillow==9.5.0
 pycparser==2.21
 pyHanko==0.20.0
 pyhanko-certvalidator==0.23.0
-pyinstaller==5.13.0
-pyinstaller-hooks-contrib==2023.7
+pyinstaller==6.21.0
+pyinstaller-hooks-contrib==2026.6
 PyJWT==2.7.0
 pypdf==3.16.0
 pypng==0.20220715.0
+python-barcode==0.16.1
 python-bidi==0.4.2
 pytz==2023.3
 pywin32-ctypes==0.2.2
@@ -59,3 +61,4 @@ uritools==4.0.2
 urllib3==2.0.4
 webencodings==0.5.1
 xhtml2pdf==0.2.11
+zipp==3.23.1
