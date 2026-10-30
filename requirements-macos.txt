@@ -9,3 +9,4 @@ reportlab==3.6.13
 xhtml2pdf==0.2.11
 Pillow==9.5.0
 pyinstaller==6.21.0
+setuptools==80.10.2

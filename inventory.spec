@@ -15,6 +15,7 @@ hiddenimports += [
     "inventory.settings_desktop",
     "environ",
     "environ.environ",
+    "pkg_resources",
 
     "corsheaders",
     "corsheaders.middleware",
@@ -70,6 +71,7 @@ datas += collect_data_files("xhtml2pdf")
 
 datas += copy_metadata("Django")
 datas += copy_metadata("djangorestframework")
+datas += copy_metadata("djangorestframework-simplejwt")
 datas += copy_metadata("django-filter")
 datas += copy_metadata("django-environ")
 datas += copy_metadata("python-barcode")
