@@ -3,21 +3,24 @@ import sys
 from pathlib import Path
 
 if getattr(sys, "frozen", False):
-    BASE_DIR = Path(sys.executable).resolve().parent
+    BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
 else:
     BASE_DIR = Path(__file__).resolve().parent
+
+if sys.platform == "darwin":
+    DATA_DIR = Path.home() / "Library" / "Application Support" / "Elegant Lady"
+else:
+    DATA_DIR = BASE_DIR / "data"
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "inventory.settings_desktop")
 
 
 def ensure_directories():
-    data_dir = BASE_DIR / "data"
+    data_dir = DATA_DIR
     media_dir = data_dir / "media"
-    static_dir = BASE_DIR / "staticfiles"
 
     data_dir.mkdir(parents=True, exist_ok=True)
     media_dir.mkdir(parents=True, exist_ok=True)
-    static_dir.mkdir(parents=True, exist_ok=True)
 
 
 def main():

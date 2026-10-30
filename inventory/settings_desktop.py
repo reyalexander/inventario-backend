@@ -6,7 +6,7 @@ import environ
 
 # Detectar carpeta real del ejecutable o del proyecto
 if getattr(sys, "frozen", False):
-    APP_DIR = Path(sys.executable).resolve().parent
+    APP_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
 else:
     APP_DIR = Path(__file__).resolve().parent.parent
 
@@ -33,13 +33,12 @@ INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in [
 ]]
 
 # RUTAS REALES PARA DESKTOP
-DATA_DIR = APP_DIR / "data"
+DATA_DIR = (Path.home() / "Library" / "Application Support" / "Elegant Lady") if sys.platform == "darwin" else APP_DIR / "data"
 MEDIA_DIR = DATA_DIR / "media"
 STATICFILES_DIR = APP_DIR / "staticfiles"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-STATICFILES_DIR.mkdir(parents=True, exist_ok=True)
 
 DATABASES = {
     "default": {

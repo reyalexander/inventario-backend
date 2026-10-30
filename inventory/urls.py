@@ -5,6 +5,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
+from django.urls import re_path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -20,6 +22,13 @@ urlpatterns = [
     path("api/v1/statistics/", include("apps.dashboard_statistics.urls")),
     path("api/v1/finances/", include("apps.expenses.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# La aplicación de escritorio solo escucha en 127.0.0.1 y usa DEBUG=False.
+if settings.SETTINGS_MODULE == "inventory.settings_desktop":
+    urlpatterns += [
+        re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
+        re_path(r"^static/(?P<path>.*)$", serve, {"document_root": settings.STATIC_ROOT}),
+    ]
 
 # Swagger solo disponible si drf_yasg está instalado (no incluido en el .exe)
 try:

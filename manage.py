@@ -2,6 +2,17 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+import subprocess
+from pathlib import Path
+
+
+def use_project_venv():
+    """Use the project interpreter when Git Bash resolves `python` to Conda."""
+    if os.name != 'nt':
+        return
+    venv_python = Path(__file__).resolve().parent / 'venv' / 'Scripts' / 'python.exe'
+    if venv_python.is_file() and os.path.normcase(sys.executable) != os.path.normcase(str(venv_python)):
+        raise SystemExit(subprocess.call([str(venv_python), __file__, *sys.argv[1:]]))
 
 
 def main():
@@ -19,9 +30,10 @@ def main():
 
 
 if len(sys.argv) == 1:
-    sys.argv += ['runserver', '8001']
+    sys.argv += ['runserver', '0.0.0.0:8001']
 elif len(sys.argv) == 2 and sys.argv[1] == 'runserver':
-    sys.argv.append('8001')
+    sys.argv.append('0.0.0.0:8001')
 
 if __name__ == '__main__':
+    use_project_venv()
     main()

@@ -7,6 +7,8 @@ En desarrollo
 
 ## Installation
 
+En Windows, el entorno de este proyecto usa Python 3.9. Si Git Bash muestra `(venv)` pero `python` o `pip` apuntan a Miniconda, instala dependencias con `./venv/Scripts/python.exe -m pip install -r requirements.txt`. `manage.py` selecciona automáticamente ese intérprete cuando existe. Para confirmar la ruta: `./venv/Scripts/python.exe -c "import sys; print(sys.executable)"`.
+
 A continuación se detallan los pasos para configurar el proyecto en un entorno local.
 
 ```bash

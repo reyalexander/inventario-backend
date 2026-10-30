@@ -371,6 +371,40 @@ class OrderViewSet(viewsets.ModelViewSet):
 ############################################
 
 class BoletaPDFView(View):
+    def calculate_ticket_height(
+        self,
+        elements,
+        ticket_width,
+        left_margin,
+        right_margin,
+        top_margin,
+        bottom_margin
+    ):
+        available_width = ticket_width - left_margin - right_margin
+
+        content_height = top_margin + bottom_margin
+
+        for element in elements:
+            try:
+                space_before = element.getSpaceBefore() if hasattr(element, "getSpaceBefore") else 0
+                space_after = element.getSpaceAfter() if hasattr(element, "getSpaceAfter") else 0
+
+                content_height += space_before
+
+                _, element_height = element.wrap(available_width, 10000 * mm)
+                content_height += element_height
+
+                content_height += space_after
+
+            except Exception:
+                # Si algún elemento no calcula bien su alto, damos un margen preventivo
+                content_height += 8 * mm
+
+        min_ticket_height = 140 * mm
+        safety_padding = 8 * mm
+
+        return max(min_ticket_height, content_height + safety_padding)
+
     def get_seller_name(self, order):
         seller = getattr(order, "user", None)
         if not seller:
@@ -381,29 +415,19 @@ class BoletaPDFView(View):
 
     def get(self, request, order_id):
         order = Order.objects.select_related("user", "id_client").get(pk=order_id)
-        order_details = OrderDetail.objects.filter(id_order=order)
+        order_details = list(OrderDetail.objects.select_related("id_product").filter(id_order=order))
 
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'filename="boleta_{order.order_code}.pdf"'
 
         buffer = BytesIO()
 
-        # Tamaño ticket térmico 80mm
-        ticket_width = 80 * mm
-
-        # Altura dinámica aproximada según cantidad de items
-        base_height = 120 * mm
-        extra_height = max(len(order_details), 1) * 8 * mm
-        ticket_height = base_height + extra_height
-
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=(ticket_width, ticket_height),
-            leftMargin=2 * mm,
-            rightMargin=2 * mm,
-            topMargin=2 * mm,
-            bottomMargin=2 * mm,
-        )
+        # Tamano ticket termico. El alto se calcula con el contenido real.
+        ticket_width = 74 * mm
+        left_margin = 2 * mm
+        right_margin = 2 * mm
+        top_margin = 2 * mm
+        bottom_margin = 2 * mm
 
         elements = []
 
@@ -422,7 +446,7 @@ class BoletaPDFView(View):
             'TicketTitle',
             parent=styles['Normal'],
             fontName='Helvetica-Bold',
-            fontSize=11,
+            fontSize=9.5,
             leading=13,
             alignment=TA_CENTER,
             spaceAfter=3,
@@ -432,7 +456,7 @@ class BoletaPDFView(View):
             'NormalCenter',
             parent=styles['Normal'],
             fontName='Helvetica',
-            fontSize=8.5,
+            fontSize=8,
             leading=10,
             alignment=TA_CENTER,
             spaceAfter=2,
@@ -471,7 +495,7 @@ class BoletaPDFView(View):
         # Logo
         if company_image:
             try:
-                image = Image(company_image.path, width=30 * mm, height=30 * mm)
+                image = Image(company_image.path, width=45 * mm, height=45 * mm)
                 image.hAlign = 'CENTER'
                 elements.append(image)
                 elements.append(Spacer(1, 2 * mm))
@@ -493,8 +517,7 @@ class BoletaPDFView(View):
             if getattr(user, 'ruc', None):
                 elements.append(Paragraph(f"RUC: {user.ruc}", normal_center))
 
-        elements.append(Paragraph("BOLETA DE VENTA", title_style))
-        elements.append(Paragraph(f"Nro: {order.order_code}", normal_center))
+        elements.append(Paragraph(f"BOLETA DE VENTA: {order.order_code}", title_style))
         elements.append(Spacer(1, 2 * mm))
 
         # Datos cliente
@@ -505,9 +528,6 @@ class BoletaPDFView(View):
         elements.append(Paragraph(f"<b>Fecha:</b> {local_order_date.strftime('%d/%m/%Y %H:%M:%S')}", normal_left))
         if getattr(order.id_client, 'document', None):
             elements.append(Paragraph(f"<b>Doc:</b> {order.id_client.document}", normal_left))
-
-        if getattr(order.id_client, 'address', None):
-            elements.append(Paragraph(f"<b>Dir:</b> {order.id_client.address}", small_left))
         
         # Datos vendedor
         elements.append(Paragraph(f"<b>Vendedor:</b> {self.get_seller_name(order)}", normal_left))
@@ -533,12 +553,17 @@ class BoletaPDFView(View):
                 Paragraph(f"{subtotal:.2f}", normal_center),
             ])
 
-        usable_width = ticket_width - (8 * mm)  # restando márgenes
+        usable_width = ticket_width - left_margin - right_margin
         table = Table(
             table_data,
-            colWidths=[usable_width * 0.58, usable_width * 0.14, usable_width * 0.28],
+            colWidths=[
+                usable_width * 0.58,
+                usable_width * 0.14,
+                usable_width * 0.28
+            ],
             repeatRows=1,
-            hAlign='LEFT'
+            hAlign='LEFT',
+            splitByRow=0
         )
 
         table.setStyle(TableStyle([
@@ -570,6 +595,26 @@ class BoletaPDFView(View):
 
         # Pie
         elements.append(Paragraph("Gracias por su compra", normal_center))
+
+        ticket_height = self.calculate_ticket_height(
+            elements,
+            ticket_width,
+            left_margin,
+            right_margin,
+            top_margin,
+            bottom_margin,
+        )
+
+        response["X-Ticket-Height-MM"] = str(round(ticket_height / mm, 2))
+
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=(ticket_width, ticket_height),
+            leftMargin=left_margin,
+            rightMargin=right_margin,
+            topMargin=top_margin,
+            bottomMargin=bottom_margin,
+        )
 
         doc.build(elements)
 

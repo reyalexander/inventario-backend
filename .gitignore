@@ -198,6 +198,7 @@ FakesAssemblies/
 
 .idea
 venv
+.venv-macos/
 db.sqlite3
 
 #pycache files
@@ -211,11 +212,4 @@ staticfiles/
 media/
 dist/
 
-# migrations only for development
-**/migrations/**
-!**/migrations
-!**/migrations/__init__.py
-*/migrations/**
-*migrations/*
-**migrations/*
-**/migrations/**
+# Las migraciones son necesarias para instalar la base de datos en macOS.

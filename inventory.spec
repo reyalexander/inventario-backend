@@ -60,7 +60,6 @@ datas = [
     (str(project_dir / "inventory"), "inventory"),
     (str(project_dir / "apps"), "apps"),
     (str(project_dir / "staticfiles"), "staticfiles"),
-    (str(project_dir / "data"), "data"),
     (str(project_dir / ".env.desktop"), "."),
 ]
 
