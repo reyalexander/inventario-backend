@@ -51,7 +51,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         upload_to="user_photo",
         null=True,
         blank=True,
-        default='https://w7.pngwing.com/pngs/81/570/png-transparent-profile-logo-computer-icons-user-user-blue-heroes-logo.png'
     )
 
     is_admin = models.BooleanField(default=False, verbose_name='super administrador')

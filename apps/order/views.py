@@ -18,6 +18,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from io import BytesIO
+import os
 from datetime import datetime
 from reportlab.platypus import Table, TableStyle, Image
 from apps.order_detail.models import OrderDetail
@@ -33,6 +34,18 @@ from django.db import transaction
 from django.db.models import Sum, Count
 from decimal import Decimal
 from rest_framework.pagination import PageNumberPagination
+
+
+def company_logo_path(user):
+    """Return a usable local logo, or None when no image was uploaded."""
+    photo = getattr(user, 'photo', None)
+    if not photo or not photo.name:
+        return None
+    try:
+        path = photo.path
+    except (OSError, ValueError, NotImplementedError):
+        return None
+    return path if os.path.isfile(path) else None
 
 
 class CustomPageNumberPagination(PageNumberPagination):
@@ -434,7 +447,7 @@ class BoletaPDFView(View):
         # Usuario / empresa
         try:
             user = User.objects.get(id=1)
-            company_image = user.photo if user.photo else None
+            company_image = company_logo_path(user)
         except User.DoesNotExist:
             user = None
             company_image = None
@@ -495,7 +508,7 @@ class BoletaPDFView(View):
         # Logo
         if company_image:
             try:
-                image = Image(company_image.path, width=45 * mm, height=45 * mm)
+                image = Image(company_image, width=45 * mm, height=45 * mm)
                 image.hAlign = 'CENTER'
                 elements.append(image)
                 elements.append(Spacer(1, 2 * mm))
@@ -702,24 +715,26 @@ class FacturaPDFView(View):
         p = canvas.Canvas(response, pagesize=letter)
 
         # Obtener la imagen de la empresa y mostrarla en la cabecera de la boleta
+        user = None
         try:
             user = User.objects.get(id=1)  # Reemplaza '1' con el ID de la empresa o la forma en que obtienes el usuario/empresa correcto
-            company_image = user.photo
+            company_image = company_logo_path(user)
             if company_image:
-                p.drawImage(company_image.path, 400, 640, width=160, height=80)  # Ajusta las coordenadas según el diseño deseado
+                p.drawImage(company_image, 400, 640, width=160, height=80)  # Ajusta las coordenadas según el diseño deseado
         except User.DoesNotExist:
             pass
 
         # Configurar los detalles de la boleta
-        p.drawString(130, 700, user.first_name.upper() + " " + user.last_name.upper())
-        p.drawString(130, 680, user.address.upper())
-        p.drawString(130, 660, f'Cel.: {user.phone}')
-        p.drawString(130, 640, f'RUC.: {user.ruc}')
+        company_name = f"{user.first_name or ''} {user.last_name or ''}".upper().strip() if user else ''
+        p.drawString(130, 700, company_name or 'Elegant Lady')
+        p.drawString(130, 680, (user.address or '').upper() if user else '')
+        p.drawString(130, 660, f'Cel.: {user.phone or ""}' if user else '')
+        p.drawString(130, 640, f'RUC.: {user.ruc or ""}' if user else '')
         p.drawString(130, 620, f'FACTURA DE VENTA ELECTRÓNICA No.: {order.order_code}')
 
         p.drawString(80, 590, f'Sr(A): {order.id_client.name}')
         p.drawString(80, 575, f'DNI/RUC: {order.id_client.document}')
-        p.drawString(80, 560, f'Dirección: {order.id_client.address.upper()}')
+        p.drawString(80, 560, f'Dirección: {(order.id_client.address or "").upper()}')
         p.drawString(80, 545, f'Fecha: {order.date.strftime("%d/%m/%Y %H:%M:%S")}')
         p.drawString(80, 530, f'Forma de Pago: {order.id_client.document}')
 
@@ -779,7 +794,7 @@ class BoletaCuadradaPDFView(View):
         # Obtener la imagen de la empresa y mostrarla en la cabecera de la boleta
         try:
             user = User.objects.get(id=1)  # Reemplaza '1' con el ID de la empresa o la forma en que obtienes el usuario/empresa correcto
-            company_image = user.photo
+            company_image = company_logo_path(user)
         except User.DoesNotExist:
             company_image = None
 
@@ -788,8 +803,7 @@ class BoletaCuadradaPDFView(View):
 
         if company_image:
             image_width, image_height = 170, 100
-            company_image_path = company_image.path
-            image = Image(company_image_path, width=image_width, height=image_height)
+            image = Image(company_image, width=image_width, height=image_height)
             elements.append(image)
 
         styles = getSampleStyleSheet()
